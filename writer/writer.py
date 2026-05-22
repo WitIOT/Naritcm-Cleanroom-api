@@ -35,14 +35,15 @@ def is_number(value) -> bool:
 def build_sensor_points(data: dict, ts: int) -> list:
     points = []
 
-    if data.get("ok") is False:
-        print(f"sensor api returned ok=false: {data}", flush=True)
+    # รองรับทั้ง /api/sensor และ /api/sensor/{id}
+    if "name" in data:
+        sensors = {data["name"]: data}
+    else:
+        sensors = {k: data[k] for k in ("room1", "outdoor") if k in data}
 
-    for location in ("room1", "outdoor"):
-        sensor = data.get(location)
+    for location, sensor in sensors.items():
         if not isinstance(sensor, dict):
             continue
-
         temp = sensor.get("temp")
         humi = sensor.get("humi")
         dewpoint = sensor.get("dewpoint")
@@ -58,11 +59,9 @@ def build_sensor_points(data: dict, ts: int) -> list:
             .field("humi", float(humi))
             .time(ts, WritePrecision.NS)
         )
-
         if is_number(dewpoint):
             point = point.field("dewpoint", float(dewpoint))
-
-        if isinstance(unit_id, int) and not isinstance(unit_id, bool):
+        if isinstance(unit_id, int):
             point = point.field("unit_id", unit_id)
 
         points.append(point)
