@@ -127,7 +127,7 @@ def read_sensor_unit(unit_id: int):
         regs = read_raw_regs(unit_id)
         humi, temp = to_humi_temp(regs)
         dew = calc_dewpoint(temp, humi)
-        name = "indoor" if unit_id == room1_ID else (
+        name = "room1" if unit_id == room1_ID else (
             "outdoor" if unit_id == OUTDOOR_ID else f"unit_{unit_id}"
         )
         return {
