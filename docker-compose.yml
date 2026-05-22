@@ -40,7 +40,7 @@ services:
     restart: unless-stopped
 
     environment:
-      SENSOR_API_URL: "http://naritcm-cleanroom-api:8000/api/sensor"
+      SENSOR_API_URL: "http://naritcm-cleanroom-api:8000/api/sensor/1"
       POLL_SEC: "1.0"
       HTTP_TIMEOUT_SEC: "2.5"
       INFLUX_URL:    "http://influxdb:8086"
