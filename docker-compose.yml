@@ -1,7 +1,7 @@
 services:
-  naritcm-lidar-api:
+  naritcm-Cleanroom-api:
     build: .
-    container_name: naritcm-lidar-api
+    container_name: naritcm-cleanroom-api
     restart: unless-stopped
     stop_grace_period: 10s
 
@@ -58,4 +58,4 @@ services:
   #     INFLUX_TOKEN: "kTRPZoj7DxBnKY4xDy5kJty6KZhv4BXg5W9JiUGdh9kdaPQr5RF9lic0TYx_3XucOqNHnGlydlTQwFiwuPS-6Q=="
 
   #   depends_on:
-  #     - naritcm-lidar-api
+  #     - naritcm-cleanroom-api
