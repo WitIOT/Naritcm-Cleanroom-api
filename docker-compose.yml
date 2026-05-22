@@ -1,5 +1,5 @@
 services:
-  naritcm-Cleanroom-api:
+  naritcm-cleanroom-api:
     build: .
     container_name: naritcm-cleanroom-api
     restart: unless-stopped
