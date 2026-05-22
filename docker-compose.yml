@@ -10,15 +10,11 @@ services:
 
     privileged: false
     devices:
-      - "/dev/ttyACM0:/dev/ttyACM0"        # RS485 Modbus sensor — symlink คงที่ไม่เปลี่ยนตาม reboot
+      - "/dev/ttyACM0:/dev/ttyACM0"
       - "/dev/gpiochip0:/dev/gpiochip0"
-      # - "/dev/ttyRG15:/dev/ttyUSB0"        # RG-15 Rain Sensor — symlink คงที่ไม่เปลี่ยนตาม reboot
 
     environment:
-      # ===== Web/Static =====
       STATIC_DIR: "static"
-
-      # ===== RS485 Modbus =====
       SERIAL_PORT: "/dev/ttyACM0"
       BAUDRATE: "9600"
       PARITY: "N"
@@ -35,27 +31,80 @@ services:
       OUTDOOR_ID: "2"
       POLL_MS: "1000"
 
+    networks:
+      - cleanroom-net
 
-  # sensor-writer:
-  #   build: ./writer
-  #   container_name: sensor-writer
-  #   restart: unless-stopped
+  sensor-writer:
+    build: ./writer
+    container_name: sensor-writer
+    restart: unless-stopped
 
-  #   environment:
-  #     # ===== API URLs =====
-  #     SENSOR_API_URL: "http://naritcm-lidar-api:8000/api/sensor"
-  #     # RAIN_API_URL:   "http://naritcm-lidar-api:8000/api/rain"
-  #     POLL_SEC: "1.0"
-  #     HTTP_TIMEOUT_SEC: "2.5"
+    environment:
+      SENSOR_API_URL: "http://naritcm-cleanroom-api:8000/api/sensor"
+      POLL_SEC: "1.0"
+      HTTP_TIMEOUT_SEC: "2.5"
+      INFLUX_URL:    "http://influxdb:8086"
+      INFLUX_ORG:    "Narit"
+      INFLUX_BUCKET: "Cleanroom"
+      MEASUREMENT:   "room1"
+      INFLUX_TOKEN:  "kTRPZoj7DxBnKY4xDy5kJty6KZhv4BXg5W9JiUGdh9kdaPQr5RF9lic0TYx_3XucOqNHnGlydlTQwFiwuPS-6Q=="
 
-  #     # ===== InfluxDB =====
-  #     INFLUX_URL:    "http://192.168.49.8:8086"
-  #     INFLUX_ORG:    "Narit"
-  #     INFLUX_BUCKET: "Lidar"
-  #     MEASUREMENT:      "room1"
-  #     RAIN_MEASUREMENT: "rain"     # measurement แยกสำหรับข้อมูลฝน
+    depends_on:
+      - naritcm-cleanroom-api
+      - influxdb
 
-  #     INFLUX_TOKEN: "kTRPZoj7DxBnKY4xDy5kJty6KZhv4BXg5W9JiUGdh9kdaPQr5RF9lic0TYx_3XucOqNHnGlydlTQwFiwuPS-6Q=="
+    networks:
+      - cleanroom-net
 
-  #   depends_on:
-  #     - naritcm-cleanroom-api
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    restart: unless-stopped
+
+    ports:
+      - "8086:8086"
+
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE:        "setup"
+      DOCKER_INFLUXDB_INIT_USERNAME:    "admin"
+      DOCKER_INFLUXDB_INIT_PASSWORD:    "12345678"   # เปลี่ยนได้
+      DOCKER_INFLUXDB_INIT_ORG:         "Narit"
+      DOCKER_INFLUXDB_INIT_BUCKET:      "Cleanroom"
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "kTRPZoj7DxBnKY4xDy5kJty6KZhv4BXg5W9JiUGdh9kdaPQr5RF9lic0TYx_3XucOqNHnGlydlTQwFiwuPS-6Q=="
+
+    networks:
+      - cleanroom-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+    environment:
+      GF_SECURITY_ADMIN_USER:     "admin"
+      GF_SECURITY_ADMIN_PASSWORD: "12345678"   # เปลี่ยนได้
+
+    depends_on:
+      - influxdb
+
+    networks:
+      - cleanroom-net
+
+volumes:
+  influxdb-data:
+  influxdb-config:
+  grafana-data:
+
+networks:
+  cleanroom-net:
+    driver: bridge
