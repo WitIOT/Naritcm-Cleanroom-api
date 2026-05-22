@@ -62,7 +62,7 @@ TEMP_INDEX = int(os.getenv("TEMP_INDEX", "1"))
 HUMI_INDEX = int(os.getenv("HUMI_INDEX", "0"))
 SCALE_DIV = float(os.getenv("SCALE_DIV", "10"))
 
-room1_ID = int(os.getenv("room1", "1"))
+room1_ID = int(os.getenv("ROOM1", os.getenv("room1", "1")))
 OUTDOOR_ID = int(os.getenv("OUTDOOR_ID", "2"))
 
 POLL_MS = int(os.getenv("POLL_MS", "1000"))
