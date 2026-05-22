@@ -31,7 +31,7 @@ services:
       TEMP_INDEX: "1"
       HUMI_INDEX: "0"
       SCALE_DIV: "10"
-      INDOOR_ID: "1"
+      ROOM1: "1"
       OUTDOOR_ID: "2"
       POLL_MS: "1000"
 
