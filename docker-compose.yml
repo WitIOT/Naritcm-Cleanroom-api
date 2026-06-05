@@ -94,7 +94,7 @@ services:
       GF_DATAPROXY_DIAL_TIMEOUT:       "30"
       GF_DATAPROXY_KEEP_ALIVE_SECONDS: "300"
       GF_AUTH_ANONYMOUS_ENABLED:       "true"
-      GF_AUTH_ANONYMOUS_ORG_NAME:      "Main Org."
+      GF_AUTH_ANONYMOUS_ORG_NAME:      "Narit"
       GF_AUTH_ANONYMOUS_ORG_ROLE:      "Viewer"
 
     depends_on:
