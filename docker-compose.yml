@@ -83,16 +83,19 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
-
     ports:
       - "3000:3000"
-
     volumes:
       - grafana-data:/var/lib/grafana
-
     environment:
       GF_SECURITY_ADMIN_USER:     "admin"
       GF_SECURITY_ADMIN_PASSWORD: "12345678"   # เปลี่ยนได้
+      GF_DATAPROXY_TIMEOUT:            "300"
+      GF_DATAPROXY_DIAL_TIMEOUT:       "30"
+      GF_DATAPROXY_KEEP_ALIVE_SECONDS: "300"
+      GF_AUTH_ANONYMOUS_ENABLED:       "true"
+      GF_AUTH_ANONYMOUS_ORG_NAME:      "Main Org."
+      GF_AUTH_ANONYMOUS_ORG_ROLE:      "Viewer"
 
     depends_on:
       - influxdb
