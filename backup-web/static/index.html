@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cleanroom Backup</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#0f1117; --surface:#181c24; --surface2:#1e2330;
+  --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.15);
+  --text:#e8eaf0; --text2:#8890a4;
+  --accent:#4fc3f7; --accent-dim:rgba(79,195,247,0.12); --accent-border:rgba(79,195,247,0.35);
+  --green:#66bb6a; --green-dim:rgba(102,187,106,0.12); --green-border:rgba(102,187,106,0.3);
+  --red:#ef5350; --red-dim:rgba(239,83,80,0.12); --red-border:rgba(239,83,80,0.3);
+  --radius:10px; --radius-sm:6px;
+}
+body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:14px; line-height:1.6; min-height:100vh; padding:2rem 1rem; }
+.wrap { max-width:680px; margin:0 auto; }
+header { margin-bottom:2rem; }
+header h1 { font-size:22px; font-weight:600; display:flex; align-items:center; gap:10px; }
+.dot { width:10px; height:10px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); display:inline-block; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+header p { color:var(--text2); font-size:13px; margin-top:5px; }
+
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; margin-bottom:1rem; }
+.card-label { font-size:11px; font-weight:600; letter-spacing:0.8px; text-transform:uppercase; color:var(--text2); margin-bottom:1rem; }
+.field { margin-bottom:12px; }
+.field:last-child { margin-bottom:0; }
+label { display:block; font-size:12px; color:var(--text2); margin-bottom:5px; font-weight:500; }
+input, select { width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:9px 12px; color:var(--text); font-size:13px; font-family:inherit; outline:none; transition:border-color 0.15s; appearance:none; }
+input:focus, select:focus { border-color:var(--accent); }
+.select-wrap { position:relative; }
+.select-wrap::after { content:'▾'; position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--text2); pointer-events:none; font-size:12px; }
+.row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+.bucket-tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.bucket-tag { padding:4px 12px; border-radius:99px; font-size:12px; cursor:pointer; border:1px solid var(--border2); background:transparent; color:var(--text2); transition:all 0.15s; font-family:inherit; }
+.bucket-tag:hover, .bucket-tag.active { border-color:var(--accent-border); color:var(--accent); background:var(--accent-dim); }
+
+/* Calendar heatmap */
+.calendar-wrap { overflow-x:auto; }
+.cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.cal-nav { display:flex; gap:6px; align-items:center; }
+.cal-nav button { padding:4px 10px; border-radius:var(--radius-sm); border:1px solid var(--border2); background:transparent; color:var(--text2); font-size:12px; cursor:pointer; font-family:inherit; }
+.cal-nav button:hover { color:var(--text); border-color:var(--border2); }
+.cal-nav span { font-size:13px; font-weight:500; min-width:100px; text-align:center; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.cal-dow { text-align:center; font-size:11px; color:var(--text2); padding:4px 0; }
+.cal-day {
+  aspect-ratio:1; border-radius:4px; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-size:11px; position:relative; transition:all 0.15s;
+  border:1px solid transparent;
+}
+.cal-day.empty { background:transparent; cursor:default; }
+.cal-day.no-data { background:var(--surface2); color:var(--text2); }
+.cal-day.no-data:hover { border-color:var(--border2); }
+.cal-day.has-data { color:var(--text); }
+.cal-day.has-data:hover { transform:scale(1.08); border-color:var(--accent-border); }
+.cal-day.selected { border:2px solid var(--accent) !important; }
+.cal-day.in-range { outline:1px solid var(--accent-border); }
+.cal-day .day-num { font-size:12px; font-weight:500; line-height:1; }
+.cal-day .day-count { font-size:9px; color:var(--text2); margin-top:2px; line-height:1; }
+.cal-day.has-data .day-count { color:inherit; opacity:0.7; }
+
+.heat-0 { background:var(--surface2); }
+.heat-1 { background:rgba(79,195,247,0.15); }
+.heat-2 { background:rgba(79,195,247,0.30); }
+.heat-3 { background:rgba(79,195,247,0.50); }
+.heat-4 { background:rgba(79,195,247,0.70); color:#0f1117 !important; }
+
+.legend { display:flex; align-items:center; gap:6px; margin-top:10px; font-size:11px; color:var(--text2); }
+.legend-box { width:14px; height:14px; border-radius:3px; }
+
+.selected-range { font-size:12px; color:var(--accent); margin-top:8px; min-height:18px; }
+
+.preset-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.preset { padding:5px 14px; border-radius:99px; border:1px solid var(--border2); background:transparent; color:var(--text2); font-size:12px; cursor:pointer; transition:all 0.15s; font-family:inherit; }
+.preset:hover, .preset.active { border-color:var(--accent-border); background:var(--accent-dim); color:var(--accent); }
+
+.btn-row { display:flex; gap:10px; }
+button.btn { flex:1; padding:11px 16px; border-radius:var(--radius-sm); border:1px solid var(--border2); background:var(--surface2); color:var(--text); font-size:13px; font-family:inherit; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; transition:all 0.15s; }
+button.btn:hover { background:var(--surface); }
+button.btn.primary { background:var(--accent-dim); border-color:var(--accent-border); color:var(--accent); }
+button.btn.primary:hover { background:rgba(79,195,247,0.2); }
+button.btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+.status-bar { display:none; padding:10px 14px; border-radius:var(--radius-sm); font-size:13px; margin-top:12px; align-items:center; gap:8px; }
+.status-bar.info { display:flex; background:var(--accent-dim); border:1px solid var(--accent-border); color:var(--accent); }
+.status-bar.success { display:flex; background:var(--green-dim); border:1px solid var(--green-border); color:var(--green); }
+.status-bar.error { display:flex; background:var(--red-dim); border:1px solid var(--red-border); color:var(--red); }
+
+.spinner { width:14px; height:14px; border:2px solid rgba(79,195,247,0.3); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.progress-wrap { margin-top:12px; display:none; }
+.progress-wrap.show { display:block; }
+.progress-label { font-size:12px; color:var(--text2); margin-bottom:6px; display:flex; justify-content:space-between; }
+.progress-bar { height:4px; background:var(--border); border-radius:99px; overflow:hidden; }
+.progress-fill { height:100%; background:var(--accent); border-radius:99px; transition:width 0.3s; width:0%; }
+
+.cal-loading { text-align:center; padding:2rem; color:var(--text2); font-size:13px; }
+.stats-row { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+.stat-pill { background:var(--surface2); border-radius:99px; padding:4px 12px; font-size:12px; color:var(--text2); }
+.stat-pill span { color:var(--accent); font-weight:500; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="dot"></span> Cleanroom Backup</h1>
+    <p>Export ข้อมูล sensor จาก InfluxDB เป็นไฟล์ CSV</p>
+  </header>
+
+  <div class="card">
+    <div class="card-label">Bucket</div>
+    <div class="field">
+      <div class="select-wrap">
+        <select id="bucket-select" onchange="onBucketChange()">
+          <option value="">กำลังโหลด...</option>
+        </select>
+      </div>
+    </div>
+    <div class="bucket-tags" id="bucket-tags"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">ข้อมูลในระบบ</div>
+    <div id="cal-container"><div class="cal-loading">กำลังโหลด...</div></div>
+    <div class="selected-range" id="range-label"></div>
+    <div style="margin-top:10px" class="legend">
+      <span>น้อย</span>
+      <div class="legend-box heat-1"></div>
+      <div class="legend-box heat-2"></div>
+      <div class="legend-box heat-3"></div>
+      <div class="legend-box heat-4"></div>
+      <span>มาก</span>
+      <span style="margin-left:8px;color:var(--surface2);background:var(--text2);padding:1px 6px;border-radius:3px;font-size:10px">ไม่มีข้อมูล</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">ช่วงเวลา</div>
+    <div class="preset-bar">
+      <button class="preset" onclick="setPreset('1d',this)">1 วัน</button>
+      <button class="preset" onclick="setPreset('7d',this)">7 วัน</button>
+      <button class="preset" onclick="setPreset('30d',this)">30 วัน</button>
+      <button class="preset" onclick="setPreset('90d',this)">3 เดือน</button>
+      <button class="preset active" onclick="setPreset('custom',this)">กำหนดเอง</button>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>เริ่มต้น</label>
+        <input type="datetime-local" id="start" />
+      </div>
+      <div class="field">
+        <label>สิ้นสุด</label>
+        <input type="datetime-local" id="stop" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="btn-row">
+      <button class="btn primary" id="btn-dl" onclick="startExport()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download CSV
+      </button>
+    </div>
+    <div class="progress-wrap" id="prog-wrap">
+      <div class="progress-label">
+        <span id="prog-text">กำลัง export...</span>
+        <span id="prog-size">0 KB</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>
+    <div class="status-bar" id="status"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const DAYS_TH = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+let daysData = {};
+let calYear, calMonth;
+let rangeStart = null, rangeEnd = null, pickingEnd = false;
+
+function toLocal(d) {
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+
+function fmtNum(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
+  if (n >= 1000) return (n/1000).toFixed(1)+'k';
+  return String(n);
+}
+
+function setPreset(mode, el) {
+  document.querySelectorAll('.preset').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const now = new Date();
+  const days = {'1d':1,'7d':7,'30d':30,'90d':90}[mode];
+  if (days) {
+    $('start').value = toLocal(new Date(now - days*86400000));
+    $('stop').value = toLocal(now);
+    rangeStart = $('start').value.slice(0,10);
+    rangeEnd = $('stop').value.slice(0,10);
+    updateRangeLabel();
+    renderCalendar();
+  }
+}
+
+function selectBucket(name) {
+  $('bucket-select').value = name;
+  document.querySelectorAll('.bucket-tag').forEach(t => t.classList.toggle('active', t.dataset.name === name));
+  loadStats();
+}
+
+function onBucketChange() {
+  const name = $('bucket-select').value;
+  document.querySelectorAll('.bucket-tag').forEach(t => t.classList.toggle('active', t.dataset.name === name));
+  loadStats();
+}
+
+async function loadBuckets() {
+  try {
+    const r = await fetch('/api/buckets');
+    const d = await r.json();
+    const buckets = d.buckets || [];
+    const sel = $('bucket-select');
+    sel.innerHTML = buckets.map(b => `<option value="${b}">${b}</option>`).join('');
+    const tags = $('bucket-tags');
+    tags.innerHTML = buckets.map(b =>
+      `<button class="bucket-tag" data-name="${b}" onclick="selectBucket('${b}')">${b}</button>`
+    ).join('');
+    if (buckets.length > 0) {
+      selectBucket(buckets[0]);
+    }
+  } catch(e) {
+    $('bucket-select').innerHTML = '<option>โหลดไม่สำเร็จ</option>';
+  }
+}
+
+async function loadStats() {
+  const bucket = $('bucket-select').value;
+  if (!bucket) return;
+  $('cal-container').innerHTML = '<div class="cal-loading"><div style="display:inline-block;width:18px;height:18px;border:2px solid rgba(79,195,247,0.3);border-top-color:#4fc3f7;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:8px"></div>กำลังโหลดข้อมูล...</div>';
+  try {
+    const r = await fetch(`/api/stats?bucket=${encodeURIComponent(bucket)}&months=6`);
+    const d = await r.json();
+    daysData = d.days || {};
+    const now = new Date();
+    calYear = now.getFullYear();
+    calMonth = now.getMonth();
+    renderCalendar();
+    renderStats();
+  } catch(e) {
+    $('cal-container').innerHTML = '<div class="cal-loading" style="color:var(--red)">โหลดไม่สำเร็จ: ' + e.message + '</div>';
+  }
+}
+
+function renderStats() {
+  const total = Object.values(daysData).reduce((a,b) => a+b, 0);
+  const days  = Object.keys(daysData).length;
+  const max   = Math.max(...Object.values(daysData), 0);
+  const existing = document.querySelector('.stats-row');
+  if (existing) existing.remove();
+  const row = document.createElement('div');
+  row.className = 'stats-row';
+  row.innerHTML = `
+    <div class="stat-pill">วันที่มีข้อมูล <span>${days} วัน</span></div>
+    <div class="stat-pill">Records ทั้งหมด <span>${fmtNum(total)}</span></div>
+    <div class="stat-pill">สูงสุด/วัน <span>${fmtNum(max)}</span></div>`;
+  $('cal-container').prepend(row);
+}
+
+function getHeatClass(count) {
+  if (!count) return 'heat-0';
+  const max = Math.max(...Object.values(daysData), 1);
+  const r = count / max;
+  if (r < 0.25) return 'heat-1';
+  if (r < 0.5)  return 'heat-2';
+  if (r < 0.75) return 'heat-3';
+  return 'heat-4';
+}
+
+function renderCalendar() {
+  const old = document.querySelector('.calendar-wrap');
+  if (old) old.remove();
+
+  const wrap = document.createElement('div');
+  wrap.className = 'calendar-wrap';
+
+  const header = document.createElement('div');
+  header.className = 'cal-header';
+  header.innerHTML = `
+    <div class="cal-nav">
+      <button onclick="changeMonth(-1)">‹</button>
+      <span id="cal-title">${MONTHS_TH[calMonth]} ${calYear + 543}</span>
+      <button onclick="changeMonth(1)">›</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2)">คลิกเลือกวันเริ่มต้น → สิ้นสุด</div>`;
+  wrap.appendChild(header);
+
+  const grid = document.createElement('div');
+  grid.className = 'cal-grid';
+
+  DAYS_TH.forEach(d => {
+    const dow = document.createElement('div');
+    dow.className = 'cal-dow';
+    dow.textContent = d;
+    grid.appendChild(dow);
+  });
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+
+  for (let i = 0; i < firstDay; i++) {
+    const blank = document.createElement('div');
+    blank.className = 'cal-day empty';
+    grid.appendChild(blank);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${pad(calMonth+1)}-${pad(d)}`;
+    const count = daysData[dateStr] || 0;
+    const cell = document.createElement('div');
+    cell.className = `cal-day ${count > 0 ? 'has-data '+getHeatClass(count) : 'no-data heat-0'}`;
+    cell.dataset.date = dateStr;
+    if (rangeStart && dateStr === rangeStart) cell.classList.add('selected');
+    if (rangeEnd && dateStr === rangeEnd) cell.classList.add('selected');
+    if (rangeStart && rangeEnd && dateStr > rangeStart && dateStr < rangeEnd) cell.classList.add('in-range');
+    cell.innerHTML = `<div class="day-num">${d}</div>${count > 0 ? `<div class="day-count">${fmtNum(count)}</div>` : ''}`;
+    cell.addEventListener('click', () => onDayClick(dateStr));
+    cell.title = count > 0 ? `${dateStr}: ${count.toLocaleString()} records` : `${dateStr}: ไม่มีข้อมูล`;
+    grid.appendChild(cell);
+  }
+
+  wrap.appendChild(grid);
+  const statsRow = document.querySelector('.stats-row');
+  if (statsRow) statsRow.after(wrap);
+  else $('cal-container').appendChild(wrap);
+}
+
+function changeMonth(delta) {
+  calMonth += delta;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+
+function onDayClick(dateStr) {
+  document.querySelectorAll('.preset').forEach(b => b.classList.remove('active'));
+  document.querySelector('.preset:last-child').classList.add('active');
+
+  if (!pickingEnd) {
+    rangeStart = dateStr;
+    rangeEnd = null;
+    pickingEnd = true;
+    $('start').value = dateStr + 'T00:00';
+    $('stop').value = '';
+  } else {
+    if (dateStr < rangeStart) {
+      rangeEnd = rangeStart;
+      rangeStart = dateStr;
+    } else {
+      rangeEnd = dateStr;
+    }
+    pickingEnd = false;
+    $('start').value = rangeStart + 'T00:00';
+    $('stop').value = rangeEnd + 'T23:59';
+  }
+  updateRangeLabel();
+  renderCalendar();
+}
+
+function updateRangeLabel() {
+  const el = $('range-label');
+  if (rangeStart && rangeEnd) {
+    el.textContent = `เลือก: ${rangeStart} ถึง ${rangeEnd}`;
+  } else if (rangeStart) {
+    el.textContent = `เริ่ม: ${rangeStart} — คลิกวันสิ้นสุด`;
+  } else {
+    el.textContent = '';
+  }
+}
+
+function formatSize(b) {
+  if (b < 1024) return b+' B';
+  if (b < 1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+
+function setStatus(type, msg) {
+  const el = $('status');
+  el.className = 'status-bar '+type;
+  el.innerHTML = (type==='info'?'<div class="spinner"></div>':'')+`<span>${msg}</span>`;
+}
+
+async function startExport() {
+  const start  = $('start').value;
+  const stop   = $('stop').value;
+  const bucket = $('bucket-select').value;
+  if (!start || !stop) { setStatus('error','กรุณาเลือกช่วงวันที่'); return; }
+  if (!bucket)         { setStatus('error','กรุณาเลือก Bucket'); return; }
+
+  const startISO = new Date(start).toISOString();
+  const stopISO  = new Date(stop).toISOString();
+
+  $('btn-dl').disabled = true;
+  $('prog-wrap').classList.add('show');
+  $('prog-fill').style.width = '5%';
+  $('prog-text').textContent = 'กำลัง query...';
+  $('prog-size').textContent = '0 KB';
+  setStatus('info', `กำลัง export "${bucket}" ...`);
+
+  try {
+    const url = `/api/export?start=${encodeURIComponent(startISO)}&stop=${encodeURIComponent(stopISO)}&bucket=${encodeURIComponent(bucket)}`;
+    const res = await fetch(url);
+    if (!res.ok) { throw new Error(res.status + ' — ' + (await res.text()).slice(0,200)); }
+
+    const reader = res.body.getReader();
+    const chunks = []; let received = 0;
+    $('prog-fill').style.width = '20%';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value); received += value.length;
+      $('prog-size').textContent = formatSize(received);
+      $('prog-fill').style.width = Math.min(20 + received/50000, 92)+'%';
+      $('prog-text').textContent = 'รับข้อมูล...';
+    }
+    $('prog-fill').style.width = '100%';
+
+    const blob = new Blob(chunks, { type:'text/csv' });
+    const fname = res.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1]
+      || `${bucket}_${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.csv`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fname; a.click();
+    URL.revokeObjectURL(a.href);
+    setStatus('success', `✓ Download สำเร็จ — ${formatSize(received)} — ${fname}`);
+  } catch(e) {
+    setStatus('error', '✗ ' + e.message);
+    $('prog-wrap').classList.remove('show');
+  }
+  $('btn-dl').disabled = false;
+}
+
+const now = new Date();
+$('stop').value  = toLocal(now);
+$('start').value = toLocal(new Date(now - 30*86400000));
+loadBuckets();
+</script>
+</body>
+</html>
